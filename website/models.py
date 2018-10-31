@@ -7,7 +7,7 @@ from django.core.files import File
 from .validators import validate_file_size
 
 # Create your models here.
-class Papers(models.Model):
+class Paper(models.Model):
     author = models.CharField(max_length=250, default="")
     title = models.CharField(max_length=250, default="")
     year = models.IntegerField(default=None)

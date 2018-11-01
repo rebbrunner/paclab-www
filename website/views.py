@@ -7,8 +7,10 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.core.files import File
+from PIL import Image
 from .models import Paper, Profile
-from .forms import UserForm, UserFormLogin, UserFormRegister, ProfileForm
+from .forms import UserForm, UserFormLogin, UserFormRegister, ProfileForm, CropForm
 
 # Create your views here.
 class IndexView(TemplateView):
@@ -121,3 +123,36 @@ class EditProfile(View):
             messages.warning(request, ('Invalid form entry.'))
             return redirect('website:editProfile')
         return redirect('website:login')
+
+class CropView(View):
+    template_name = "website/crop.html"
+    crop_form = CropForm
+
+    def get(self, request):
+        if request.user.is_authenticated:
+            crop_form = self.crop_form(instance=request.user.profile)
+            return render(request, self.template_name, { 'crop_form' : crop_form })
+        else:
+            return redirect("website:login")
+
+    def post(self, request):
+        if request.user.is_authenticated:
+            crop_form = self.crop_form(request.POST, request.FILES, instance=request.user)
+            if crop_form.is_valid():
+                user = User.objects.get(pk=request.user.pk)
+                profile = user.profile
+
+                x = crop_form.cleaned_data['x']
+                y = crop_form.cleaned_data['y']
+                w = crop_form.cleaned_data['width']
+                h = crop_form.cleaned_data['height']
+
+                image = Image.open(profile.photo.file)
+                cropped_image = image.crop((x, y, x+w, y+h))
+                cropped_image.save(profile.photo.path)
+                messages.success(request, ('Image successfully cropped!'))
+                return redirect('website:cropView')
+            messages.warning(request, ('Invalid form entry.'))
+            return redirect('website:cropView')
+        else:
+            return redirect("website:login")
